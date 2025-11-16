@@ -9,15 +9,14 @@
     "nodemailer": "^7.0.6",
     "socket.io": "^4.8.1"
   },
-  "name": "investpro",
+  "name": "Royalempire",
   "version": "1.0.0",
   "description": "This project is a dynamic login website that allows users to log in using their username or email, password, and a reference code. After logging in, users are redirected to a verification page where they can enter a verification code. Upon successful verification, users are welcomed on a dedicated welcome page.",
   "main": "server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node server.js",
-    "json.schemaDownload.enable": "true",
-    "type": "module"
+ 
   },
   "keywords": [],
   "author": "",
