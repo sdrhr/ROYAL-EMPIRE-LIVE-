@@ -4,6 +4,7 @@
   "description": "This project is a dynamic login website that allows users to log in using their username or email, password, and a reference code. Upon successful verification, users are welcomed on a dedicated welcome page.",
   "main": "server.js",
   "scripts": {
+    "type":"module",
     "start": "node server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
