@@ -1,4 +1,12 @@
 {
+  "name": "Royalempire",
+  "version": "1.0.0",
+  "description": "This project is a dynamic login website that allows users to log in using their username or email, password, and a reference code. Upon successful verification, users are welcomed on a dedicated welcome page.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
   "dependencies": {
     "bcryptjs": "^3.0.2",
     "cors": "^2.8.5",
@@ -9,16 +17,8 @@
     "nodemailer": "^7.0.6",
     "socket.io": "^4.8.1"
   },
-  "name": "Royalempire",
-  "version": "1.0.0",
-  "description": "This project is a dynamic login website that allows users to log in using their username or email, password, and a reference code. After logging in, users are redirected to a verification page where they can enter a verification code. Upon successful verification, users are welcomed on a dedicated welcome page.",
-  "main": "server.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server.js",
- 
-  },
   "keywords": [],
   "author": "",
   "license": "ISC"
 }
+
