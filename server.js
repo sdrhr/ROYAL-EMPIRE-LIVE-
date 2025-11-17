@@ -441,7 +441,7 @@ app.get("/", (req, res) => {
 });
 
 // ✅ Catch-all fallback for any other route (Express 5 safe)
-app.get("/*", (req, res) => {
+app.get("*", (req, res) => {
   res.sendFile(path.join(publicDir, "index.html"));
 });
 
