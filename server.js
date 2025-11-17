@@ -434,19 +434,20 @@ fs.readdirSync(publicDir)
       res.sendFile(path.join(publicDir, file));
     });
   });
-// ✅ Frontend
+
+// ✅ Ensure root serves index (optional but explicit)
 app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
+  res.sendFile(path.join(publicDir, "index.html"));
 });
 
-// Catch-all route (fix for Render deployment)
-app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
+// ✅ Catch-all fallback for any other route (Express 5 safe)
+app.get("/*", (req, res) => {
+  res.sendFile(path.join(publicDir, "index.html"));
 });
 
-
-// 🚀 Start server
+// 🚀 Start server (use Render's PORT when available)
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () =>
   console.log(`✅ Server running at http://localhost:${PORT}`)
 );
+
