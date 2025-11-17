@@ -434,11 +434,16 @@ fs.readdirSync(publicDir)
       res.sendFile(path.join(publicDir, file));
     });
   });
-
-// ✅ Catch-all fallback to index.html
-app.get("*", (req, res) => {
-  res.sendFile(path.join(publicDir, "index.html"));
+// ✅ Frontend
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"));
 });
+
+// Catch-all route (fix for Render deployment)
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"));
+});
+
 
 // 🚀 Start server
 const PORT = process.env.PORT || 3000;
