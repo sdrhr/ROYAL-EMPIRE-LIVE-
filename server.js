@@ -441,9 +441,10 @@ app.get("/", (req, res) => {
 });
 
 // ✅ Catch-all fallback for any other route (Express 5 safe)
-app.get("(.*)", (req, res) => {
+app.get(/.*/, (req, res) => {
   res.sendFile(path.join(publicDir, "index.html"));
 });
+
 
 // 🚀 Start server (use Render's PORT when available)
 const PORT = process.env.PORT || 3000;
