@@ -487,7 +487,7 @@ input::placeholder {
     <script src="js/script.js"></script>
   <script src="js/text.js"></script>
   <script src="js/common.js"></script>
- <script type="module">
+<script type="module">
   import { startAutoRefresh } from './js/common.js';
 
   startAutoRefresh();
@@ -498,6 +498,7 @@ input::placeholder {
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
+
     const type = document.getElementById("transaction-type").value;
     const amount = parseFloat(document.getElementById("amount").value);
     const userNumber = document.getElementById("user-number").value.trim();
@@ -509,18 +510,24 @@ input::placeholder {
 
     // send to backend
     const email = localStorage.getItem("email") || "demo@user.com";
-    try {
-     const res = await fetch("https://royal-empire-backend.onrender.com/api/transactions", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({ email, type, amount, userNumber }),
-});
 
+    try {
+      const res = await fetch("https://royal-empire-backend.onrender.com/api/transactions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, type, amount, userNumber }),
       });
+
       const data = await res.json();
-      if (res.ok) msg.textContent = "✅ Transaction submitted!";
-      else msg.textContent = "❌ " + (data.message || "Error");
-      startAutoRefresh(); // refresh balances after TX
+
+      if (res.ok) {
+        msg.textContent = "✅ Transaction submitted!";
+      } else {
+        msg.textContent = "❌ " + (data.message || "Error");
+      }
+
+      startAutoRefresh(); // refresh balances after transaction
+
     } catch (err) {
       console.error(err);
       msg.textContent = "❌ Server error";
