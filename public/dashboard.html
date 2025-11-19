@@ -510,10 +510,12 @@ input::placeholder {
     // send to backend
     const email = localStorage.getItem("email") || "demo@user.com";
     try {
-      const res = await fetch("http://localhost:5000/api/transactions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, type, amount, userNumber }),
+     const res = await fetch("https://royal-empire-backend.onrender.com/api/transactions", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ email, type, amount, userNumber }),
+});
+
       });
       const data = await res.json();
       if (res.ok) msg.textContent = "✅ Transaction submitted!";
