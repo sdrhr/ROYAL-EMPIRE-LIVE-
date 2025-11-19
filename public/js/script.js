@@ -148,7 +148,8 @@ async function handleRegistration(e) {
 
   // ✅ Register with backend
   try {
-    const res = await fetch('/api/register', {
+    const res = awaitfetch("https://royal-empire.onrender.com/api/register",
+ {
   method: 'POST',
   body: JSON.stringify({ email, username, password, referralCode }),
   headers: { 'Content-Type': 'application/json' }
@@ -208,7 +209,8 @@ async function handleLogin(e) {
   }
 
   try {
-    const res = await fetch('/api/login', {
+    const res = await fetch("https://royal-empire.onrender.com/api/login"
+, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ contact: email, password })
