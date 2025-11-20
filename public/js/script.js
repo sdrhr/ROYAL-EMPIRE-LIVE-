@@ -278,7 +278,7 @@ function signInWithGoogle() {
     // Simulate API call to Google
     setTimeout(function() {
         // For demo purposes, we'll generate a random user
-        const randomNames = ['Alex Johnson', 'Sarah Miller', 'Mike Davis', 'Emma Wilson', 'James Brown'];
+        const randomNames = ['Royal-empire member'];
         const randomName = randomNames[Math.floor(Math.random() * randomNames.length)];
         
         // Set user data
