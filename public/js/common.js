@@ -1,7 +1,7 @@
 // ====================== ✅ common.js ======================
 
-// 🌐 Your Render backend URL
-const API_BASE = "https://royal-empire.onrender.com";
+  // ✅ Your correct backend URL
+  const API_BASE = "https://royal-empire-11.onrender.com";
 
 // ----------------------------------------------------------
 // FETCH USER DATA
