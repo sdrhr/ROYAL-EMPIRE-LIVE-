@@ -11,12 +11,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const email = localStorage.getItem("email");
 
-  if (!email) {
-    console.warn("⚠️ No email found — redirecting to login...");
-    window.location.href = "login.html";
-    return;
-  }
-
   const USDT_TO_PKR = 300;
   const API_BASE = "https://royal-empire-backend.onrender.com"; // ✅ Correct backend URL
 
@@ -58,7 +52,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // Load user data from backend
   async function loadUserData() {
     try {
-      const res = await fetch(`${API_BASE}/api/user/${encodeURIComponent(email)}`);
+      const res = await fetch(`${API_BASE}/api/user/$(email)}`);
       const data = await res.json();
 
       localStorage.setItem("balance", data.balance || 0);
