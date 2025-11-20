@@ -149,90 +149,90 @@
     </div>
   </div>
 
-  <script>
-    const API_BASE = "https://royal-empire.onrender.com";
-    const email = localStorage.getItem("email") || "demo@user.com";
-    document.getElementById("userEmail").textContent = email;
+ <script>
+  const API_BASE = "https://royal-empire-backend.onrender.com";
+  const email = localStorage.getItem("email") || "demo@user.com";
+  document.getElementById("userEmail").textContent = email;
 
-    // Packages
-    const packages = [
-      { name: "Inca Empire x2", amount: 10 },
-      { name: "Macedonian Empire x2", amount: 25 },
-      { name: "Aksumite Empire x2", amount: 50 },
-      { name: "Aztec Empire x2", amount: 100 },
-      { name: "Ottoman Empire x2", amount: 250 },
-      { name: "Mughal Empire x2", amount: 500 },
-      { name: "Persian Empire x2", amount: 1000 },
-      { name: "Byzantine Empire x2", amount: 2500 },
-      { name: "Roman Empire x2", amount: 5000 },
-      { name: "French Empire x2", amount: 10000 },
-    ];
+  const packages = [
+    { name: "Inca Empire x2", amount: 10 },
+    { name: "Macedonian Empire x2", amount: 25 },
+    { name: "Aksumite Empire x2", amount: 50 },
+    { name: "Aztec Empire x2", amount: 100 },
+    { name: "Ottoman Empire x2", amount: 250 },
+    { name: "Mughal Empire x2", amount: 500 },
+    { name: "Persian Empire x2", amount: 1000 },
+    { name: "Byzantine Empire x2", amount: 2500 },
+    { name: "Roman Empire x2", amount: 5000 },
+    { name: "French Empire x2", amount: 10000 },
+  ];
 
-    const grid = document.getElementById("packageGrid");
-    grid.innerHTML = packages.map(p => `
-      <div class="package">
-        <h3>${p.name}</h3>
-        <p>Invest $${p.amount}</p>
-        <button onclick="buyPackage(${p.amount}, '${p.name}')">Buy</button>
-      </div>
-    `).join("");
+  const grid = document.getElementById("packageGrid");
+  grid.innerHTML = packages.map(p => `
+    <div class="package">
+      <h3>${p.name}</h3>
+      <p>Invest $${p.amount}</p>
+      <button onclick="buyPackage(${p.amount}, '${p.name}')">Buy</button>
+    </div>
+  `).join("");
 
-    async function loadUserBalance() {
-      try {
-        const res = await fetch(`${API_BASE}/api/user/${email}`);
-        const data = await res.json();
-        if (!res.ok) throw new Error("Server error");
+  async function loadUserBalance() {
+    try {
+      const res = await fetch(`${API_BASE}/api/user/${email}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error("Server error");
 
-        updateUI(data);
-        localStorage.setItem("userData", JSON.stringify(data));
-      } catch {
-        const cached = JSON.parse(localStorage.getItem("userData") || "{}");
-        updateUI(cached);
-      }
+      updateUI(data);
+      localStorage.setItem("userData", JSON.stringify(data));
+    } catch {
+      const cached = JSON.parse(localStorage.getItem("userData") || "{}");
+      updateUI(cached);
     }
+  }
 
-    function updateUI(data) {
-      if (!data) return;
-      document.getElementById("totalBalanceAmount").textContent = `$${data.balance?.toFixed(2) || 0}`;
-      document.getElementById("totalEarningsAmount").textContent = `$${data.totalEarning?.toFixed(2) || 0}`;
-      document.getElementById("referralEarningsAmount").textContent = `$${data.referralEarning?.toFixed(2) || 0}`;
-      document.getElementById("totalInvestmentAmount").textContent = `$${data.totalInvestment?.toFixed(2) || 0}`;
-      document.getElementById("eusdtAmount").textContent = ((data.balance || 0) * 10).toFixed(2);
+  function updateUI(data) {
+    if (!data) return;
+    document.getElementById("totalBalanceAmount").textContent = `$${data.balance?.toFixed(2) || 0}`;
+    document.getElementById("totalEarningsAmount").textContent = `$${data.totalEarning?.toFixed(2) || 0}`;
+    document.getElementById("referralEarningsAmount").textContent = `$${data.referralEarning?.toFixed(2) || 0}`;
+    document.getElementById("totalInvestmentAmount").textContent = `$${data.totalInvestment?.toFixed(2) || 0}`;
+    document.getElementById("eusdtAmount").textContent = ((data.balance || 0) * 10).toFixed(2);
 
-      const list = document.getElementById("historyList");
-      if (data.transactions?.length) {
-        list.innerHTML = data.transactions.slice().reverse().map(t => `
-          <div class="history-entry">
-            <div>
-              <strong>${t.type.toUpperCase()}</strong> - $${t.amount}
-              <br><small>${new Date(t.createdAt).toLocaleString()}</small>
-            </div>
-            <div>Status: ${t.status}</div>
+    const list = document.getElementById("historyList");
+    if (data.transactions?.length) {
+      list.innerHTML = data.transactions.slice().reverse().map(t => `
+        <div class="history-entry">
+          <div>
+            <strong>${t.type.toUpperCase()}</strong> - $${t.amount}
+            <br><small>${new Date(t.createdAt).toLocaleString()}</small>
           </div>
-        `).join("");
-      } else list.innerHTML = "<p>No history yet.</p>";
-    }
+          <div>Status: ${t.status}</div>
+        </div>
+      `).join("");
+    } else list.innerHTML = "<p>No history yet.</p>";
+  }
 
-    async function buyPackage(amount, name) {
-      if (!confirm(`Buy ${name} package for $${amount}?`)) return;
-      try {
-        const res = await fetch(`${API_BASE}/api/packages/buy`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, amount, packageName: name })
-        });
-        const data = await res.json();
-        if (res.ok) {
-          alert(`✅ ${name} purchased! ⏳ Profit will be added in 40 days.`);
-          await loadUserBalance();
-        } else alert(`❌ ${data.message || "Error"}`);
-      } catch {
-        alert("⚠️ Server error while purchasing.");
-      }
+  async function buyPackage(amount, name) {
+    if (!confirm(`Buy ${name} package for $${amount}?`)) return;
+    try {
+      const res = await fetch(`${API_BASE}/api/packages/buy`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, amount, packageName: name })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        alert(`✅ ${name} purchased! Profit will be added in 40 days.`);
+        await loadUserBalance();
+      } else alert(`❌ ${data.message || "Error"}`);
+    } catch {
+      alert("⚠️ Server error while purchasing.");
     }
+  }
 
-    loadUserBalance();
-    setInterval(loadUserBalance, 5000);
-  </script>
+  loadUserBalance();
+  setInterval(loadUserBalance, 5000);
+</script>
+
 </body>
 </html>
