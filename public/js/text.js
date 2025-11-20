@@ -8,8 +8,14 @@ document.addEventListener("DOMContentLoaded", () => {
   const ssPreview = document.getElementById("ss-preview");
   const depositBox = document.getElementById("deposit-number-box");
   const uploadBox = document.getElementById("ss-upload-box");
+const email = localStorage.getItem("email");
 
-  const email = localStorage.getItem("email") || "demo@user.com";
+if (!email) {
+  console.warn("⚠️ No email found — redirecting to login...");
+  window.location.href = "login.html";
+  return;
+}
+
   const USDT_TO_PKR = 300;
   const API = "https://royal-empire-backend.onrender.com"; // 🔥 FIXED BASE URL
 
