@@ -46,7 +46,7 @@ export async function fetchUserData() {
     localStorage.setItem("referralEarning", (data.referralEarning || 0).toFixed(2));
     localStorage.setItem("totalInvestment", (data.totalInvestment || 0).toFixed(2));
 
-    return data;
+  
   } catch (err) {
     console.error("❌ Error fetching user data:", err);
     return null;
