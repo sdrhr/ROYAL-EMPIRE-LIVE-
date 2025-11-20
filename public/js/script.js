@@ -116,6 +116,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 // ==================== REGISTRATION ====================
+// ==================== REGISTRATION ====================
 async function handleRegistration(e) {
   e.preventDefault();
   console.log('Registration form submitted');
@@ -124,6 +125,7 @@ async function handleRegistration(e) {
   const username = document.getElementById('username').value.trim();
   const email = document.getElementById('email').value.trim();
   const password = document.getElementById('password').value;
+  const referralCode = document.getElementById('referralCode')?.value || null; // optional
   const country = document.getElementById('country').value;
   const captchaInput = document.getElementById('captchaInput').value;
   const captchaCode = document.getElementById('captchaCode').textContent;
@@ -134,53 +136,43 @@ async function handleRegistration(e) {
   }
 
   if (!isValidContact(email)) {
-    alert('Please enter a valid phone number or email address.');
+    alert('Please enter a valid phone number or email.');
     document.getElementById('email').focus();
     return;
   }
 
   if (captchaInput.toUpperCase() !== captchaCode) {
-    alert('Invalid captcha code. Please try again.');
+    alert('Invalid captcha code.');
     document.getElementById('captchaCode').textContent = generateCaptcha();
     document.getElementById('captchaInput').value = '';
     return;
   }
 
-  // ✅ Register with backend
   try {
-    const res = awaitfetch("https://royal-empire-11.onrender.com/api/register",
- {
-  method: 'POST',
-  body: JSON.stringify({ email, username, password, referralCode }),
-  headers: { 'Content-Type': 'application/json' }
-});
+    const res = await fetch("https://royal-empire-11.onrender.com/api/register", {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, username, password, referralCode })
+    });
 
     const data = await res.json();
     if (!res.ok) throw new Error(data.message || 'Registration failed');
+
+    // ✅ Force-save email in localStorage
+    localStorage.setItem('royalEmpireEmail', email);
+
+    alert('✅ Registration successful — redirecting to dashboard...');
+    setTimeout(() => window.location.href = 'dashboard.html', 800);
+
   } catch (err) {
     console.error('Server registration error:', err);
     alert('Registration failed: ' + err.message);
-    return;
+    // ✅ Force-save email even if registration fails
+    if (email) localStorage.setItem('royalEmpireEmail', email);
   }
-
-  // ✅ Save locally
-  currentUser.name = name;
-  currentUser.username = username;
-  currentUser.email = email;
-  currentUser.balance = 0;
-  currentUser.totalInvestment = 0;
-  currentUser.totalEarnings = 0;
-  currentUser.availableBalance = 0;
-  currentUser.eusdt = 0;
-  currentUser.todayEarnings = 0;
-  saveUserData();
-
-  alert('✅ Registration successful — redirecting to dashboard...');
-  setTimeout(() => (window.location.href = 'dashboard.html'), 800);
 }
 
-
-/// ==================== LOGIN ====================
+// ==================== LOGIN ====================
 async function handleLogin(e) {
   e.preventDefault();
 
@@ -194,10 +186,8 @@ async function handleLogin(e) {
   const captchaInput = captchaInputEl.value;
   const captchaCode = captchaCodeEl.textContent;
 
-  // Force-save email in localStorage even if login fails
-  if (email) {
-    localStorage.setItem('royalEmpireEmail', email);
-  }
+  // ✅ Force-save email even if login fails
+  if (email) localStorage.setItem('royalEmpireEmail', email);
 
   if (!email || !password || !captchaInput) {
     alert('Please fill in all required fields.');
@@ -211,7 +201,7 @@ async function handleLogin(e) {
   }
 
   if (captchaInput.toUpperCase() !== captchaCode) {
-    alert('Invalid captcha code. Please try again.');
+    alert('Invalid captcha code.');
     captchaCodeEl.textContent = generateCaptcha();
     captchaInputEl.value = '';
     return;
@@ -225,10 +215,8 @@ async function handleLogin(e) {
     });
 
     const data = await res.json();
-
     if (!res.ok) throw new Error(data.message || 'Login failed');
 
-    // Save user info properly
     localStorage.setItem('isLoggedIn', 'true');
     localStorage.setItem('royalEmpireUser', JSON.stringify({
       email: data.email || email,
@@ -237,7 +225,7 @@ async function handleLogin(e) {
     }));
 
     alert('✅ Login successful — redirecting to dashboard...');
-    setTimeout(() => (window.location.href = 'dashboard.html'), 600);
+    setTimeout(() => window.location.href = 'dashboard.html', 600);
 
   } catch (err) {
     console.error('Login error:', err);
