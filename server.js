@@ -1,4 +1,3 @@
-
 import express from "express";
 import mongoose from "mongoose";
 import multer from "multer";
@@ -14,23 +13,27 @@ import bodyParser from "body-parser";
 
 dotenv.config();
 const app = express();
-// Allow only your frontend domain
 
-app.use(cors({
-  origin: [
-    "https://royal-empire.onrender.com",
-    "https://royal-empire-11.onrender.com"
-  ],
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"]
-}));
+// -------------------------------------
+// ✅ CORS (Allow your two frontend sites)
+// -------------------------------------
+app.use(
+  cors({
+    origin: [
+      "https://royal-empire.onrender.com",
+      "https://royal-empire-11.onrender.com",
+    ],
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
 
 app.use(express.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-
-
-// ✅ Create server and socket
+// -------------------------------------
+// ✅ Create HTTP + Socket.IO server
+// -------------------------------------
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: "*" } });
 
@@ -38,14 +41,17 @@ app.use("/uploads", express.static("uploads"));
 const __dirname = path.resolve();
 app.use(express.static(path.join(__dirname, "public")));
 
-// ✅ MongoDB connection
+// -------------------------------------
+// ✅ MongoDB Connection
+// -------------------------------------
 mongoose
   .connect(process.env.MONGO_URI)
   .then(() => console.log("✅ MongoDB Connected"))
-  .catch((err) => console.error("❌ Mongo Error:", err));
+  .catch((err) => console.error("❌ MongoDB Error:", err));
 
-
+// -------------------------------------
 // 🧱 Schemas
+// -------------------------------------
 const transactionSchema = new mongoose.Schema({
   type: String,
   amount: Number,
@@ -74,7 +80,9 @@ const userSchema = new mongoose.Schema({
 
 const User = mongoose.model("User", userSchema);
 
-// 🧰 Multer setup
+// -------------------------------------
+// 🧰 Multer
+// -------------------------------------
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     if (!fs.existsSync("uploads")) fs.mkdirSync("uploads");
@@ -86,17 +94,52 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
-// ✅ Register Route
+// -------------------------------------
+// 📧 EMAIL ROUTE (Merged correctly)
+// -------------------------------------
+app.post("/api/send-email", async (req, res) => {
+  try {
+    const { to, subject, message } = req.body;
+
+    if (!to || !subject || !message) {
+      return res.status(400).json({ message: "Missing email details" });
+    }
+
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.EMAIL_USER, // your gmail
+        pass: process.env.EMAIL_PASS, // app password
+      },
+    });
+
+    await transporter.sendMail({
+      from: process.env.EMAIL_USER,
+      to,
+      subject,
+      html: `<p>${message}</p>`,
+    });
+
+    res.json({ message: "Email sent successfully!" });
+  } catch (err) {
+    console.error("❌ Email error:", err);
+    res.status(500).json({ message: "Email failed" });
+  }
+});
+
+// -------------------------------------
+// 🟢 Register Route
+// -------------------------------------
 app.post("/api/register", async (req, res) => {
   try {
     const { email, password, referralCode } = req.body;
+
     let user = await User.findOne({ email });
     if (user) return res.status(400).json({ message: "User already exists" });
 
     const hashedPassword = await bcrypt.hash(password, 10);
     user = new User({ email, password: hashedPassword });
 
-    // Link referral if code valid
     if (referralCode) {
       const referrer = await User.findOne({ referralCode });
       if (referrer) {
@@ -108,8 +151,9 @@ app.post("/api/register", async (req, res) => {
 
     user.referralCode = "ROYAL-" + Math.floor(10000 + Math.random() * 90000);
     await user.save();
+
     res.json({
-      message: "✅ Registration successful",
+      message: "Registration successful",
       referralCode: user.referralCode,
     });
   } catch (err) {
@@ -118,349 +162,158 @@ app.post("/api/register", async (req, res) => {
   }
 });
 
-// ✅ Login
+// -------------------------------------
+// 🟢 Login
+// -------------------------------------
 app.post("/api/login", async (req, res) => {
   try {
     const { contact, password } = req.body;
+
     const user = await User.findOne({ email: contact });
     if (!user) return res.status(400).json({ message: "User not found" });
 
     const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) return res.status(400).json({ message: "Invalid password" });
+    if (!isMatch)
+      return res.status(400).json({ message: "Invalid password" });
 
     res.json({
-      message: "✅ Login successful",
+      message: "Login successful",
       email: user.email,
       username: user.username,
-      balance: user.balance || 0,
+      balance: user.balance,
     });
   } catch (err) {
-    console.error("Login error:", err);
     res.status(500).json({ message: "Login failed" });
   }
 });
 
-// ✅ Get user info
-app.get("/api/user/:email", async (req, res) => {
-  const user = await User.findOne({ email: req.params.email });
-  if (!user) return res.json({ balance: 0, transactions: [] });
-  res.json(user);
-});
-
-// ✅ Transactions
-app.post("/api/transactions", upload.single("screenshot"), async (req, res) => {
-  try {
-    const { email, type, method, amount } = req.body;
-    const file = req.file;
-    if (!email || !type || !method || !amount)
-      return res.status(400).json({ message: "Missing required fields" });
-
-    let user = await User.findOne({ email });
-    if (!user) return res.status(404).json({ message: "User not found" });
-
-    const numericAmount = parseFloat(amount);
-    const newTx = {
-      type,
-      amount: numericAmount,
-      method,
-      status: "Pending",
-      createdAt: new Date(),
-      screenshotUrl: file ? `/uploads/${file.filename}` : null,
-    };
-    user.transactions.push(newTx);
-    await user.save();
-
-    if (type === "deposit") {
-      setTimeout(async () => {
-        const dbUser = await User.findOne({ email });
-        if (!dbUser) return;
-
-        dbUser.balance += numericAmount;
-        dbUser.totalEarning += numericAmount;
-
-        if (dbUser.referredBy) {
-          const referrer = await User.findOne({ email: dbUser.referredBy });
-          if (referrer) {
-            const bonus = numericAmount * 0.02;
-            referrer.referralEarning += bonus;
-            referrer.balance += bonus;
-            await referrer.save();
-            console.log(`🎁 Referral bonus $${bonus} added to ${referrer.email}`);
-          }
-        }
-
-        const tx = dbUser.transactions.find(
-          (t) =>
-            t.createdAt.getTime() === newTx.createdAt.getTime() &&
-            t.amount === numericAmount
-        );
-        if (tx) tx.status = "Completed";
-
-        await dbUser.save();
-        console.log(`💰 Deposit of $${numericAmount} completed for ${email}`);
-      }, 10000);
-    } else if (type === "withdraw") {
-      setTimeout(async () => {
-        const dbUser = await User.findOne({ email });
-        if (!dbUser) return;
-        if (dbUser.balance < numericAmount) return;
-
-        dbUser.balance -= numericAmount;
-        const tx = dbUser.transactions.find(
-          (t) =>
-            t.createdAt.getTime() === newTx.createdAt.getTime() &&
-            t.amount === numericAmount
-        );
-        if (tx) tx.status = "Completed";
-
-        await dbUser.save();
-        console.log(`🏦 Withdraw of $${numericAmount} completed for ${email}`);
-      }, 10000);
-    }
-
-    res.json({
-      message:
-        type === "deposit"
-          ? "Deposit submitted! Balance will update after processing."
-          : "Withdrawal submitted! Processing shortly.",
-    });
-  } catch (err) {
-    console.error("Transaction error:", err);
-    res.status(500).json({ message: "Server Error" });
-  }
-});
-
-// ✅ Get Balance
-// ✅ Get Full User Info (Balance + Earnings + Referrals)
-// ✅ Unified User Data API
+// -------------------------------------
+// 🟢 Get User Full Info (only once)
+// -------------------------------------
 app.get("/api/user/:email", async (req, res) => {
   try {
     const email = req.params.email;
-    if (!email) return res.status(400).json({ message: "Email is required" });
-
     const user = await User.findOne({ email });
-    if (!user)
+
+    if (!user) {
       return res.status(404).json({
-        message: "User not found",
         email,
         balance: 0,
         totalEarning: 0,
         referralEarning: 0,
         totalInvestment: 0,
         eusdt: 0,
-        username: "User",
       });
+    }
 
-    // 🧮 Compute eUSDT dynamically (for example: $1 = 10 eUSDT)
-    const eusdt = Math.floor((user.balance || 0) * 10);
+    const eusdt = Math.floor(user.balance * 10);
 
-    // 🧩 Clean & consistent response
     res.json({
       email: user.email,
-      username: user.username || user.name || user.email.split("@")[0],
-      balance: Number(user.balance || 0),
-      totalEarning: Number(user.totalEarning || 0),
-      referralEarning: Number(user.referralEarning || 0),
-      totalInvestment: Number(user.totalInvestment || 0),
+      username: user.username || user.email.split("@")[0],
+      balance: user.balance,
+      totalEarning: user.totalEarning,
+      referralEarning: user.referralEarning,
+      totalInvestment: user.totalInvestment,
       eusdt,
     });
   } catch (err) {
-    console.error("❌ Error in /api/user/:email:", err);
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ message: "Error fetching user" });
   }
 });
 
-
-// ✅ Invest Route
-/// 🟢 POST /api/invest — user buys a package
-app.post("/api/packages/buy", async (req, res) => {
+// -------------------------------------
+// 🟢 Transactions (deposit / withdraw)
+// -------------------------------------
+app.post("/api/transactions", upload.single("screenshot"), async (req, res) => {
   try {
-    console.log("📩 /api/packages/buy body:", req.body); // 👈 add this
-    const { email, amount, packageName } = req.body;
-    if (!email || !amount)
-      return res.status(400).json({ message: "Missing email or amount" });
+    const { email, type, method, amount } = req.body;
 
-    const numericAmount = Number(amount);
-    if (isNaN(numericAmount) || numericAmount <= 0)
-      return res.status(400).json({ message: "Invalid amount" });
+    if (!email || !type || !method || !amount)
+      return res.status(400).json({ message: "Missing fields" });
 
     const user = await User.findOne({ email });
     if (!user) return res.status(404).json({ message: "User not found" });
 
+    const numericAmount = Number(amount);
+
+    const newTx = {
+      type,
+      amount: numericAmount,
+      method,
+      status: "Pending",
+      createdAt: new Date(),
+      screenshotUrl: req.file ? `/uploads/${req.file.filename}` : null,
+    };
+
+    user.transactions.push(newTx);
+    await user.save();
+
+    res.json({ message: "Transaction submitted!" });
+  } catch (err) {
+    res.status(500).json({ message: "Transaction error" });
+  }
+});
+
+// -------------------------------------
+// 🟢 Package Buy
+// -------------------------------------
+app.post("/api/packages/buy", async (req, res) => {
+  try {
+    const { email, amount, packageName } = req.body;
+
+    const numericAmount = Number(amount);
+    const user = await User.findOne({ email });
+
+    if (!user) return res.status(404).json({ message: "User not found" });
     if (user.balance < numericAmount)
       return res.status(400).json({ message: "Insufficient balance" });
 
-    // rest of logic...
-
-
-    // Deduct and update
     user.balance -= numericAmount;
     user.totalInvestment += numericAmount;
     user.eusdt = Math.floor(user.balance * 10);
 
-    // Record investment transaction
     user.transactions.push({
       type: "investment",
       amount: numericAmount,
+      method: packageName || "Package",
       status: "completed",
-      method: packageName || "Package Purchase",
       createdAt: new Date(),
     });
 
     await user.save();
 
-    // Schedule daily profit (1%)
-    // Schedule daily profit safely
-const dailyProfit = numericAmount * 0.01;
-setInterval(async () => {
-  const dbUser = await User.findOne({ email });
-  if (!dbUser) return;
-
-  dbUser.balance += dailyProfit;
-  dbUser.totalEarning += dailyProfit;
-  dbUser.eusdt = Math.floor(dbUser.balance * 10);
-  await dbUser.save();
-
-  console.log(`💰 Added $${dailyProfit.toFixed(2)} daily to ${email}`);
-}, 86400000);
-
-
     res.json({
-      message: "✅ Package purchased successfully! Daily 1% profit will be added.",
-      newBalance: user.balance,
-      totalInvestment: user.totalInvestment,
-      totalEarning: user.totalEarning,
-    });
-  } catch (err) {
-    console.error("❌ /api/packages/buy error:", err);
-    res.status(500).json({ message: "Server error" });
-  }
-});
-
-// ✅ Profile API — unified for dashboard/profile/balance page
-app.get("/api/profile/:email", async (req, res) => {
-  try {
-    const user = await User.findOne({ email: req.params.email });
-
-    if (!user) {
-      return res.json({
-        email: req.params.email,
-        username: "Unknown User",
-        balance: 0,
-        totalEarning: 0,
-        totalInvestment: 0,
-        referralEarning: 0,
-        eusdt: 0,
-      });
-    }
-
-    res.json({
-      email: user.email,
-      username: user.username || user.name || "Unnamed",
+      message: "Package bought successfully!",
       balance: user.balance,
-      totalEarning: user.totalEarning,
-      referralEarning: user.referralEarning || 0,
-      totalInvestment: user.totalInvestment,
-      eusdt: user.eusdt || 0,
     });
   } catch (err) {
-    console.error("❌ Profile fetch error:", err);
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ message: "Buy error" });
   }
 });
 
-// ✅ Referrals
-app.get("/api/referrals/:email", async (req, res) => {
-  const user = await User.findOne({ email: req.params.email });
-  if (!user) return res.status(404).json({ message: "User not found" });
-
-  const level1 = await User.find({ referredBy: user.email });
-  const level2 = await User.find({ referredBy: { $in: level1.map((u) => u.email) } });
-  const level3 = await User.find({ referredBy: { $in: level2.map((u) => u.email) } });
-
-  res.json({
-    referralCode: user.referralCode,
-    referralEarning: user.referralEarning,
-    levels: {
-      level1: level1.map((u) => ({ email: u.email })),
-      level2: level2.map((u) => ({ email: u.email })),
-      level3: level3.map((u) => ({ email: u.email })),
-    },
-  });
-});
-
-// 💬 Live Chat with Assistant
-io.on('connection', (socket) => {
-  console.log(`💬 New user connected: ${socket.id}`);
-
-  socket.on('chatMessage', (msg) => {
-    console.log(`📨 User says: ${msg}`);
-
-    // 1️⃣ Send user message back so it appears in their own chat box
-    socket.emit('chatMessage', { sender: 'user', text: msg });
-
-    // 2️⃣ Generate assistant reply (you can make this smarter later)
-    const reply = generateBotReply(msg);
-
-    // 3️⃣ Send bot reply back to same user
-    setTimeout(() => {
-      socket.emit('chatMessage', { sender: 'bot', text: reply });
-    }, 800); // small delay for realism
-  });
-
-  socket.on('disconnect', () => {
-    console.log(`❌ User disconnected: ${socket.id}`);
-  });
-});
-
-// 🤖 Simple Bot Logic (you can replace this with AI later)
-function generateBotReply(userMsg) {
-  const msg = userMsg.toLowerCase();
-
-  if (msg.includes('hello') || msg.includes('hi')) {
-    return '👋 Hello! How can I assist you today?';
-  }
-  if (msg.includes('deposit')) {
-    return '💰 To make a deposit, go to the Dashboard → Deposit section and follow the instructions.';
-  }
-  if (msg.includes('withdraw')) {
-    return '🏦 Withdrawals are processed within 24 hours. Please use the Withdraw section on your dashboard.';
-  }
-  if (msg.includes('help') || msg.includes('support')) {
-    return '🛠️ I’m here to help! Please tell me your issue in detail.';
-  }
- 
-  // default reply
-  return '🤖 I’m not sure I understand that yet — but our team will get back to you shortly.';
-}
-   
-// ✅ Frontend
-// ✅ Serve all HTML files automatically
+// -------------------------------------
+// 🟢 Serve Frontend
+// -------------------------------------
 const publicDir = path.join(__dirname, "public");
 fs.readdirSync(publicDir)
   .filter((file) => file.endsWith(".html"))
   .forEach((file) => {
-    const routePath =
-      file === "index.html" ? "/" : "/" + file.replace(/ /g, "-").replace(".html", "");
-    app.get(routePath, (req, res) => {
-      res.sendFile(path.join(publicDir, file));
-    });
+    const route =
+      file === "index.html" ? "/" : "/" + file.replace(".html", "");
+    app.get(route, (req, res) =>
+      res.sendFile(path.join(publicDir, file))
+    );
   });
 
-// ✅ Ensure root serves index (optional but explicit)
-app.get("/", (req, res) => {
-  res.sendFile(path.join(publicDir, "index.html"));
-});
-
-// ✅ Catch-all fallback for any other route (Express 5 safe)
-app.get(/.*/, (req, res) => {
-  res.sendFile(path.join(publicDir, "index.html"));
-});
-
-
-// 🚀 Start server (use Render's PORT when available)
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () =>
-  console.log(`✅ Server running at http://localhost:${PORT}`)
+app.get("/", (req, res) =>
+  res.sendFile(path.join(publicDir, "index.html"))
 );
 
+// -------------------------------------
+// 🚀 Start Server
+// -------------------------------------
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () =>
+  console.log(`🚀 Server running at http://localhost:${PORT}`)
+);
