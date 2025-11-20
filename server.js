@@ -14,11 +14,14 @@ import bodyParser from "body-parser";
 
 dotenv.config();
 const app = express();
-app.use(cors());
-app.use(express.json({
-  origin: "https://royal-empire.onrender.com",
-  credentials: true
+// Allow only your frontend domain
+app.use(cors({
+  origin: "https://royal-empire.onrender.com", // replace with your deployed frontend URL
+  methods: ["GET", "POST", "PUT", "DELETE"],
+  credentials: true,
 }));
+
+app.use(express.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 
