@@ -148,7 +148,7 @@ async function handleRegistration(e) {
 
   // ✅ Register with backend
   try {
-    const res = awaitfetch("https://royal-empire.onrender.com/api/register",
+    const res = awaitfetch("https://royal-empire-11.onrender.com/api/register",
  {
   method: 'POST',
   body: JSON.stringify({ email, username, password, referralCode }),
@@ -183,58 +183,56 @@ async function handleRegistration(e) {
 /// ==================== LOGIN ====================
 async function handleLogin(e) {
   e.preventDefault();
-  console.log('Login form submitted');
-
-  const email = document.getElementById('login-email').value.trim();
+  
+  const emailInput = document.getElementById('login-email').value.trim();
   const password = document.getElementById('login-password').value;
   const captchaInput = document.getElementById('login-captcha-input').value;
   const captchaCode = document.getElementById('loginCaptchaCode').textContent;
 
-  if (!email || !password || !captchaInput) {
-    alert('Please fill in all required fields.');
+  if (!emailInput || !password || !captchaInput) {
+    alert('Please fill in all fields.');
     return;
   }
 
-  if (!isValidContact(email)) {
-    alert('Please enter a valid phone number or email address.');
-    document.getElementById('login-email').focus();
-    return;
-  }
-
+  // Check captcha
   if (captchaInput.toUpperCase() !== captchaCode) {
-    alert('Invalid captcha code. Please try again.');
+    alert('Invalid captcha. Try again.');
     document.getElementById('loginCaptchaCode').textContent = generateCaptcha();
     document.getElementById('login-captcha-input').value = '';
     return;
   }
 
   try {
-    const res = await fetch("https://royal-empire.onrender.com/api/login"
-, {
+    const res = await fetch("https://royal-empire-11.onrender.com/api/login", {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contact: email, password })
+      body: JSON.stringify({ contact: emailInput, password })
     });
 
     const data = await res.json();
+
     if (!res.ok) throw new Error(data.message || 'Login failed');
 
-    // ✅ Save login status and user info properly
-    localStorage.setItem('isLoggedIn', 'true');
+    // --- FORCE save email here ---
+    const userEmail = data.email || emailInput; // fallback just in case
     localStorage.setItem('royalEmpireUser', JSON.stringify({
-      email: data.email || email,
-      username: data.username || email.split('@')[0], // fallback username
+      email: userEmail,
+      username: data.username || userEmail.split('@')[0],
       balance: data.balance || 0
     }));
 
-    alert('✅ Login successful — redirecting to dashboard...');
-    setTimeout(() => (window.location.href = 'dashboard.html'), 600);
+    // ✅ Save login status too
+    localStorage.setItem('isLoggedIn', 'true');
+
+    alert('Login successful — redirecting...');
+    setTimeout(() => window.location.href = 'dashboard.html', 600);
 
   } catch (err) {
     console.error('Login error:', err);
-    alert('❌ Login failed: ' + err.message);
+    alert('Login failed: ' + err.message);
   }
 }
+
 
 // ==================== OTHER FEATURES ====================
 function hideTransactionNumbers() {
