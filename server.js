@@ -14,9 +14,9 @@ import bodyParser from "body-parser";
 dotenv.config();
 const app = express();
 
-// -------------------------------------
-// ✅ CORS (Allow your two frontend sites)
-// -------------------------------------
+// ----------------------
+// CORS for your frontends
+// ----------------------
 app.use(
   cors({
     origin: [
@@ -31,27 +31,30 @@ app.use(
 app.use(express.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-// -------------------------------------
-// ✅ Create HTTP + Socket.IO server
-// -------------------------------------
+// ----------------------
+// HTTP + Socket.IO
+// ----------------------
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: "*" } });
 
+// ----------------------
+// Static & Uploads
+// ----------------------
 app.use("/uploads", express.static("uploads"));
 const __dirname = path.resolve();
 app.use(express.static(path.join(__dirname, "public")));
 
-// -------------------------------------
-// ✅ MongoDB Connection
-// -------------------------------------
+// ----------------------
+// MongoDB Connection
+// ----------------------
 mongoose
   .connect(process.env.MONGO_URI)
   .then(() => console.log("✅ MongoDB Connected"))
   .catch((err) => console.error("❌ MongoDB Error:", err));
 
-// -------------------------------------
-// 🧱 Schemas
-// -------------------------------------
+// ----------------------
+// Schemas
+// ----------------------
 const transactionSchema = new mongoose.Schema({
   type: String,
   amount: Number,
@@ -80,9 +83,9 @@ const userSchema = new mongoose.Schema({
 
 const User = mongoose.model("User", userSchema);
 
-// -------------------------------------
-// 🧰 Multer
-// -------------------------------------
+// ----------------------
+// Multer (uploads)
+// ----------------------
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     if (!fs.existsSync("uploads")) fs.mkdirSync("uploads");
@@ -94,22 +97,20 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
-// -------------------------------------
-// 📧 EMAIL ROUTE (Merged correctly)
-// -------------------------------------
+// ----------------------
+// Email route
+// ----------------------
 app.post("/api/send-email", async (req, res) => {
   try {
     const { to, subject, message } = req.body;
-
-    if (!to || !subject || !message) {
+    if (!to || !subject || !message)
       return res.status(400).json({ message: "Missing email details" });
-    }
 
     const transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
-        user: process.env.EMAIL_USER, // your gmail
-        pass: process.env.EMAIL_PASS, // app password
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
       },
     });
 
@@ -127,13 +128,12 @@ app.post("/api/send-email", async (req, res) => {
   }
 });
 
-// -------------------------------------
-// 🟢 Register Route
-// -------------------------------------
+// ----------------------
+// Registration
+// ----------------------
 app.post("/api/register", async (req, res) => {
   try {
     const { email, password, referralCode } = req.body;
-
     let user = await User.findOne({ email });
     if (user) return res.status(400).json({ message: "User already exists" });
 
@@ -162,19 +162,17 @@ app.post("/api/register", async (req, res) => {
   }
 });
 
-// -------------------------------------
-// 🟢 Login
-// -------------------------------------
+// ----------------------
+// Login
+// ----------------------
 app.post("/api/login", async (req, res) => {
   try {
     const { contact, password } = req.body;
-
     const user = await User.findOne({ email: contact });
     if (!user) return res.status(400).json({ message: "User not found" });
 
     const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch)
-      return res.status(400).json({ message: "Invalid password" });
+    if (!isMatch) return res.status(400).json({ message: "Invalid password" });
 
     res.json({
       message: "Login successful",
@@ -187,9 +185,9 @@ app.post("/api/login", async (req, res) => {
   }
 });
 
-// -------------------------------------
-// 🟢 Get User Full Info (only once)
-// -------------------------------------
+// ----------------------
+// Get User Info (merged route)
+// ----------------------
 app.get("/api/user/:email", async (req, res) => {
   try {
     const email = req.params.email;
@@ -222,13 +220,12 @@ app.get("/api/user/:email", async (req, res) => {
   }
 });
 
-// -------------------------------------
-// 🟢 Transactions (deposit / withdraw)
-// -------------------------------------
+// ----------------------
+// Transactions
+// ----------------------
 app.post("/api/transactions", upload.single("screenshot"), async (req, res) => {
   try {
     const { email, type, method, amount } = req.body;
-
     if (!email || !type || !method || !amount)
       return res.status(400).json({ message: "Missing fields" });
 
@@ -255,13 +252,12 @@ app.post("/api/transactions", upload.single("screenshot"), async (req, res) => {
   }
 });
 
-// -------------------------------------
-// 🟢 Package Buy
-// -------------------------------------
+// ----------------------
+// Package buy
+// ----------------------
 app.post("/api/packages/buy", async (req, res) => {
   try {
     const { email, amount, packageName } = req.body;
-
     const numericAmount = Number(amount);
     const user = await User.findOne({ email });
 
@@ -283,36 +279,28 @@ app.post("/api/packages/buy", async (req, res) => {
 
     await user.save();
 
-    res.json({
-      message: "Package bought successfully!",
-      balance: user.balance,
-    });
+    res.json({ message: "Package bought successfully!", balance: user.balance });
   } catch (err) {
     res.status(500).json({ message: "Buy error" });
   }
 });
 
-// -------------------------------------
-// 🟢 Serve Frontend
-// -------------------------------------
+// ----------------------
+// Serve Frontend
+// ----------------------
 const publicDir = path.join(__dirname, "public");
 fs.readdirSync(publicDir)
   .filter((file) => file.endsWith(".html"))
   .forEach((file) => {
-    const route =
-      file === "index.html" ? "/" : "/" + file.replace(".html", "");
-    app.get(route, (req, res) =>
-      res.sendFile(path.join(publicDir, file))
-    );
+    const route = file === "index.html" ? "/" : "/" + file.replace(".html", "");
+    app.get(route, (req, res) => res.sendFile(path.join(publicDir, file)));
   });
 
-app.get("/", (req, res) =>
-  res.sendFile(path.join(publicDir, "index.html"))
-);
+app.get("/", (req, res) => res.sendFile(path.join(publicDir, "index.html")));
 
-// -------------------------------------
-// 🚀 Start Server
-// -------------------------------------
+// ----------------------
+// Start server
+// ----------------------
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () =>
   console.log(`🚀 Server running at http://localhost:${PORT}`)
