@@ -5,11 +5,20 @@
 
 // ----------------------------------------------------------
 // FETCH USER DATA
-// ----------------------------------------------------------
 export async function fetchUserData() {
-  const email = localStorage.getItem("email");
+  let userData = localStorage.getItem("royalEmpireUser");
+
+  if (!userData) {
+    console.error("❌ No user saved in localStorage");
+    return;
+  }
+
+  userData = JSON.parse(userData);
+
+  const email = userData.email;
+
   if (!email) {
-    console.error("❌ Email not found in localStorage");
+    console.error("❌ Email missing inside royalEmpireUser");
     return;
   }
 
@@ -19,12 +28,6 @@ export async function fetchUserData() {
 
     const data = await res.json();
     console.log("User data:", data);
-
-    // update DOM...
-  } catch (err) {
-    console.error("❌ Error fetching user data:", err);
-  }
-}
 
     // 🟢 Username fallback
     const username =
@@ -46,7 +49,8 @@ export async function fetchUserData() {
     localStorage.setItem("referralEarning", (data.referralEarning || 0).toFixed(2));
     localStorage.setItem("totalInvestment", (data.totalInvestment || 0).toFixed(2));
 
-  return data;
+    return data;
+
   } catch (err) {
     console.error("❌ Error fetching user data:", err);
     return null;
