@@ -151,7 +151,15 @@ async function handleRegistration(e) {
     const res = await fetch("https://royal-empire-11.onrender.com/api/register", {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, username, password, referralCode })
+     body: JSON.stringify({
+  name,
+  username,
+  email,
+  password,
+  country,
+  referralCode
+})
+
     });
 
     const data = await res.json();
