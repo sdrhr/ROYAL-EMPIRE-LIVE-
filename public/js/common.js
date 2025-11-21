@@ -1,26 +1,22 @@
 // ====================== ✅ common.js ======================
 
   // ✅ Your correct backend URL
-  const API_BASE = "https://royal-empire-11.onrender.com";
+// ✅ Your correct backend URL
+const API_BASE = "https://royal-empire-11.onrender.com";
 
 // ----------------------------------------------------------
 // FETCH USER DATA
 export async function fetchUserData() {
-  let userData = localStorage.getItem("royalEmpireUser");
 
-  if (!userData) {
-    console.error("❌ No user saved in localStorage");
-    return;
-  }
-
-  userData = JSON.parse(userData);
-
-  const email = userData.email;
+  // ✅ Get email directly (NOT royalEmpireUser)
+  const email = localStorage.getItem("royalEmpireEmail");
 
   if (!email) {
-    console.error("❌ Email missing inside royalEmpireUser");
-    return;
+    console.error("❌ Email not found in localStorage");
+    return null;
   }
+
+  console.log("📩 Fetching user:", email);
 
   try {
     const res = await fetch(`${API_BASE}/api/user/${email}`);
