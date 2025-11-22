@@ -10,24 +10,25 @@ document.addEventListener("DOMContentLoaded", () => {
   const uploadBox = document.getElementById("ss-upload-box");
 
   // 🔥 FIXED LOGIN USER FETCH
-  let user = localStorage.getItem("royalEmpireUser");
+ // robust email retrieval
+let userRaw = localStorage.getItem("royalEmpireUser");
+let email = localStorage.getItem("royalEmpireEmail") || localStorage.getItem("email") || null;
 
-  if (!user) {
-    console.error("❌ No user found in royalEmpireUser");
-    msg.textContent = "⚠️ Please login first.";
-    msg.style.color = "red";
-    return;
+if (userRaw) {
+  try {
+    const userObj = JSON.parse(userRaw);
+    if (userObj && typeof userObj.email === "string" && userObj.email.trim()) {
+      email = userObj.email.trim().toLowerCase();
+    }
+  } catch(e) {
+    console.warn("royalEmpireUser parse failed:", e);
   }
+}
 
-  user = JSON.parse(user);
-  const email = user.email;
-
-  if (!email) {
-    console.error("❌ Email missing inside royalEmpireUser");
-    msg.textContent = "⚠️ Please login again.";
-    msg.style.color = "red";
-    return;
-  }
+if (!email) {
+  console.error("❌ Email not found in localStorage - cannot fetch user data");
+  return null; // or handle gracefully
+}
 
   const USDT_TO_PKR = 300;
   const API_BASE = "https://royal-empire-11.onrender.com";
