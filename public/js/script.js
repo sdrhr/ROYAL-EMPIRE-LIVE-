@@ -45,179 +45,199 @@ function generateCaptcha() {
   return result;
 }
 
-// ==================== CONTACT VALIDATION ====================
-function isValidContact(value) {
-  if (!value) return false;
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  const phoneRegex = /^[\+]?[0-9\s\-\(\)]{10,}$/;
+/* auth.js - login + register (client-side) */
+/* Drop this into your page or include as a module script. */
 
-  return emailRegex.test(value) || phoneRegex.test(value.replace(/\s/g, ""));
-}
+(() => {
+  const API_BASE = "https://royal-empire-11.onrender.com";
 
-// ==================== UI UPDATE ====================
-function updateUserDisplay() {
-  document.getElementById("headerUserName").textContent =
-    currentUser.username || "";
-  document.getElementById("profileUserName").textContent =
-    currentUser.username || "";
-  document.getElementById("menuUserName").textContent =
-    currentUser.username || "";
-
-  const balEl = document.getElementById("mainBalanceAmount");
-  if (balEl) {
-    balEl.textContent = balanceVisible
-      ? "$" + currentUser.balance.toFixed(2)
-      : "****";
+  // Save canonical user object used by other scripts
+  function saveRoyalUser(email, username = "", balance = 0) {
+    const normalizedEmail = String(email || "").trim().toLowerCase();
+    const userObj = {
+      email: normalizedEmail,
+      username: username || (normalizedEmail.split ? normalizedEmail.split("@")[0] : "User"),
+      balance: Number(balance || 0)
+    };
+    localStorage.setItem("royalEmpireUser", JSON.stringify(userObj));
+    localStorage.setItem("royalEmpireEmail", normalizedEmail);
+    localStorage.setItem("email", normalizedEmail); // some scripts expect this key
+    localStorage.setItem("isLoggedIn", "true");
+    return userObj;
   }
 
-  const eusdtEl = document.getElementById("mainEusdtAmount");
-  if (eusdtEl) {
-    currentUser.eusdt = Math.floor(currentUser.balance * 10);
-    eusdtEl.textContent = currentUser.eusdt.toLocaleString();
+  // Basic contact validation (email or phone)
+  function isValidContact(value) {
+    if (!value) return false;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const phoneRegex = /^[\+]?[0-9\s\-\(\)]{10,}$/;
+    if (emailRegex.test(value)) return true;
+    if (phoneRegex.test(value.replace(/\s/g, ""))) return true;
+    return false;
   }
-}
 
-// ==================== TOGGLE BALANCE ====================
-function toggleBalanceDisplay() {
-  balanceVisible = !balanceVisible;
-  updateUserDisplay();
+  // Registration handler
+  async function handleRegistration(e) {
+    if (e && e.preventDefault) e.preventDefault();
 
-  const icon = document.getElementById("headerBalanceIcon");
-  const text = document.getElementById("headerBalanceText");
+    try {
+      const nameEl = document.getElementById("name");
+      const usernameEl = document.getElementById("username");
+      const emailEl = document.getElementById("email");
+      const passwordEl = document.getElementById("password");
+      const countryEl = document.getElementById("country");
+      const referralEl = document.getElementById("referralCode");
+      const captchaInputEl = document.getElementById("captchaInput");
+      const captchaCodeEl = document.getElementById("captchaCode");
 
-  if (balanceVisible) {
-    icon.className = "fas fa-eye";
-    text.textContent = "Hide Balance";
+      const name = nameEl ? nameEl.value.trim() : "";
+      const username = usernameEl ? usernameEl.value.trim() : "";
+      const emailRaw = emailEl ? emailEl.value.trim() : "";
+      const email = emailRaw.toLowerCase();
+      const password = passwordEl ? passwordEl.value : "";
+      const country = countryEl ? countryEl.value : "";
+      const referralCode = referralEl ? referralEl.value || null : null;
+      const captchaInput = captchaInputEl ? captchaInputEl.value : "";
+      const captchaCode = captchaCodeEl ? captchaCodeEl.textContent : "";
+
+      // Validation
+      if (!name || !username || !email || !password || !country || !captchaInput) {
+        alert("Please fill all required fields.");
+        return;
+      }
+      if (!isValidContact(email)) {
+        alert("Please enter a valid email or phone.");
+        emailEl && emailEl.focus();
+        return;
+      }
+      if (captchaInput.toUpperCase() !== (captchaCode || "").toUpperCase()) {
+        alert("Invalid captcha code.");
+        if (captchaCodeEl) captchaCodeEl.textContent = (window.generateCaptcha && generateCaptcha()) || "XXXX";
+        if (captchaInputEl) captchaInputEl.value = "";
+        return;
+      }
+
+      // Call backend
+      const payload = { name, username, email, password, country, referralCode };
+      const res = await fetch(`${API_BASE}/api/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Registration failed");
+
+      // Save canonical user and redirect
+      saveRoyalUser(email, username || name, 0);
+      alert("✅ Registration successful — redirecting to dashboard...");
+      setTimeout(() => (window.location.href = "dashboard.html"), 700);
+
+    } catch (err) {
+      console.error("Registration error:", err);
+      // Even on failure, store the typed email so other pages don't break
+      try {
+        const emailEl = document.getElementById("email");
+        if (emailEl && emailEl.value) {
+          // Save minimal user with email only
+          saveRoyalUser(emailEl.value, emailEl.value.split ? emailEl.value.split("@")[0] : "");
+        }
+      } catch (e) {}
+      alert("Registration failed: " + (err.message || err));
+    }
+  }
+
+  // Login handler
+  async function handleLogin(e) {
+    if (e && e.preventDefault) e.preventDefault();
+
+    try {
+      const emailEl = document.getElementById("login-email");
+      const passEl = document.getElementById("login-password");
+      const captchaInputEl = document.getElementById("login-captcha-input");
+      const captchaCodeEl = document.getElementById("loginCaptchaCode");
+
+      const emailRaw = emailEl ? emailEl.value.trim() : "";
+      const email = emailRaw.toLowerCase();
+      const password = passEl ? passEl.value : "";
+      const captchaInput = captchaInputEl ? captchaInputEl.value : "";
+      const captchaCode = captchaCodeEl ? captchaCodeEl.textContent : "";
+
+      // Force-save typed email immediately — prevents undefined fetch later
+      if (emailRaw) {
+        localStorage.setItem("royalEmpireEmail", email);
+        localStorage.setItem("email", email);
+      }
+
+      if (!email || !password) {
+        alert("Please enter email and password.");
+        return;
+      }
+
+      if (!isValidContact(email)) {
+        alert("Please enter a valid email or phone.");
+        if (emailEl) emailEl.focus();
+        return;
+      }
+
+      if (captchaCodeEl && captchaInputEl) {
+        if ((captchaInput || "").toUpperCase() !== (captchaCode || "").toUpperCase()) {
+          alert("Invalid captcha");
+          captchaCodeEl.textContent = (window.generateCaptcha && generateCaptcha()) || "XXXX";
+          captchaInputEl.value = "";
+          return;
+        }
+      }
+
+      const res = await fetch(`${API_BASE}/api/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contact: email, password }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Login failed");
+
+      // Save complete user object used across app
+      saveRoyalUser(data.email || email, data.username || (email.split ? email.split("@")[0] : ""), data.balance || 0);
+
+      alert("✅ Login successful — redirecting to dashboard...");
+      setTimeout(() => (window.location.href = "dashboard.html"), 400);
+
+    } catch (err) {
+      console.error("Login error:", err);
+      // Keep the typed email stored so other pages can use it to avoid undefined
+      const emailEl = document.getElementById("login-email");
+      if (emailEl && emailEl.value) {
+        localStorage.setItem("royalEmpireEmail", emailEl.value.trim().toLowerCase());
+        localStorage.setItem("email", emailEl.value.trim().toLowerCase());
+      }
+      alert("Login failed: " + (err.message || err));
+    }
+  }
+
+  // Attach handlers when DOM is ready
+  function attachHandlers() {
+    const regForm = document.getElementById("registration-form");
+    if (regForm) regForm.addEventListener("submit", handleRegistration);
+
+    const loginForm = document.getElementById("login-form");
+    if (loginForm) loginForm.addEventListener("submit", handleLogin);
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", attachHandlers);
   } else {
-    icon.className = "fas fa-eye-slash";
-    text.textContent = "Show Balance";
-  }
-}
-
-// ==================== REGISTRATION ====================
-async function handleRegistration(e) {
-  e.preventDefault();
-
-  const name = document.getElementById("name").value.trim();
-  const username = document.getElementById("username").value.trim();
-  const email = document.getElementById("email").value.trim();
-  const password = document.getElementById("password").value;
-  const referralCode =
-    document.getElementById("referralCode")?.value || null;
-  const country = document.getElementById("country").value;
-
-  const captchaInput = document.getElementById("captchaInput").value;
-  const captchaCode = document.getElementById("captchaCode").textContent;
-
-  if (
-    !name ||
-    !username ||
-    !email ||
-    !password ||
-    !country ||
-    !captchaInput
-  ) {
-    alert("Please fill all required fields.");
-    return;
+    attachHandlers();
   }
 
-  if (!isValidContact(email)) {
-    alert("Invalid email or phone number.");
-    return;
-  }
-
-  if (captchaInput.toUpperCase() !== captchaCode) {
-    alert("Invalid captcha.");
-    document.getElementById("captchaCode").textContent = generateCaptcha();
-    return;
-  }
-
-  try {
-    const res = await fetch("https://royal-empire-11.onrender.com/api/auth/register", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name,
-        username,
-        email,
-        password,
-        country,
-        referralCode,
-      }),
-    });
-
-    const data = await res.json();
-
-    if (!res.ok) throw new Error(data.message);
-
-   if (!res.ok) throw new Error(data.message);
-
-// SAVE FULL USER OBJECT
-localStorage.setItem(
-  "royalEmpireUser",
-  JSON.stringify({
-    _id: data.user._id,
-    email: data.user.email,
-    username: data.user.username,
-    balance: data.user.balance || 0
-  })
-);
-
-alert("Login successful!");
-window.location.href = "dashboard.html";
-
-
-    alert("Registration successful!");
-    window.location.href = "dashboard.html";
-  } catch (err) {
-    alert("Registration failed: " + err.message);
-  }
-}
-
-// ==================== LOGIN ====================
-async function handleLogin(e) {
-  e.preventDefault();
-
-  const email = document.getElementById("login-email").value.trim();
-  const password = document.getElementById("login-password").value;
-
-  if (!email || !password) {
-    alert("Enter email & password.");
-    return;
-  }
-
-  try {
-    const res = await fetch("https://royal-empire-11.onrender.com/api/auth/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ contact: email, password }),
-    });
-
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message);
-
-   if (!res.ok) throw new Error(data.message);
-
-// SAVE FULL USER OBJECT
-localStorage.setItem(
-  "royalEmpireUser",
-  JSON.stringify({
-    _id: data.user._id,
-    email: data.user.email,
-    username: data.user.username,
-    balance: data.user.balance || 0
-  })
-);
-
-alert("Login successful!");
-window.location.href = "dashboard.html";
-
-    alert("Login successful!");
-    window.location.href = "dashboard.html";
-  } catch (err) {
-    alert("Login failed: " + err.message);
-  }
-}
+  // Expose functions for debugging if needed
+  window.royalAuth = {
+    handleLogin,
+    handleRegistration,
+    saveRoyalUser
+  };
+})();
 
 // ==================== OTHER FEATURES ====================
 
