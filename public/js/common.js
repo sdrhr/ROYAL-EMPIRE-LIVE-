@@ -1,46 +1,59 @@
 // ====================== ✅ common.js ======================
-// ✅ Base URL for API
+
 // ----------------------------------------------------------
 // CORRECT BACKEND URL
 // ----------------------------------------------------------
-const API_BASE = "https://royal-empire-11.onrender.com";
+export const API_BASE = "https://royal-empire-11.onrender.com";
 
 // ----------------------------------------------------------
-// SAFE USER LOADER (FIXES [object Object] ERRORS)
+// SAFE EMAIL LOADER (NEVER RETURNS {} or undefined)
+// ----------------------------------------------------------
+function getSafeEmail() {
+  let email = null;
+
+  // 1) Try from royalEmpireUser
+  const raw = localStorage.getItem("royalEmpireUser");
+  if (raw) {
+    try {
+      const obj = JSON.parse(raw);
+
+      if (typeof obj.email === "string") {
+        email = obj.email;
+      }
+
+      // FIX: some broken data stored email as an object → extract real one
+      if (typeof obj.email === "object" && obj.email !== null) {
+        if (typeof obj.email.email === "string") {
+          email = obj.email.email;
+        }
+      }
+    } catch (e) {
+      console.warn("⚠️ Bad royalEmpireUser JSON");
+    }
+  }
+
+  // 2) Fallbacks (very important!)
+  if (!email) email = localStorage.getItem("royalEmpireEmail");
+  if (!email) email = localStorage.getItem("email");
+
+  if (!email || typeof email !== "string") {
+    console.error("❌ No valid email found anywhere.");
+    return null;
+  }
+
+  return email.toLowerCase().trim();
+}
+
+// ----------------------------------------------------------
+// FETCH USER DATA FROM BACKEND
 // ----------------------------------------------------------
 export async function fetchUserData() {
-  let raw = localStorage.getItem("royalEmpireUser");
+  const email = getSafeEmail();
 
-  if (!raw) {
-    console.error("❌ royalEmpireUser missing in localStorage");
+  if (!email) {
+    console.error("❌ Cannot fetch: Email missing");
     return null;
   }
-
-  // Parse safely
-  let userObj;
-  try {
-    userObj = JSON.parse(raw);
-  } catch (e) {
-    console.error("❌ royalEmpireUser contains invalid JSON");
-    return null;
-  }
-
-  // FIX: sometimes email is inside userObj.email.email
-  let email = userObj?.email;
-
-  // If email is an object → extract real string
-  if (typeof email === "object" && email !== null) {
-    email = email.email;
-  }
-
-  // If still not a string → reject
-  if (typeof email !== "string") {
-    console.error("❌ userData.email is not a string:", email);
-    return null;
-  }
-
-  // ALWAYS lowercase email
-  email = email.toLowerCase().trim();
 
   console.log("📩 Fetching user:", email);
 
@@ -57,23 +70,13 @@ export async function fetchUserData() {
       data.name ||
       (data.email ? data.email.split("@")[0] : "User");
 
-    // Update UI names
-    const headerName = document.getElementById("menuUserName");
-    if (headerName) headerName.textContent = username;
-
-    // Save for usage
+    // SAVE updated values
     localStorage.setItem("menuUserName", username);
     localStorage.setItem("totalBalance", (data.balance || 0).toFixed(2));
     localStorage.setItem("eusdtBalance", ((data.balance || 0) * 10).toFixed(2));
     localStorage.setItem("totalEarning", (data.totalEarning || 0).toFixed(2));
-    localStorage.setItem(
-      "referralEarning",
-      (data.referralEarning || 0).toFixed(2)
-    );
-    localStorage.setItem(
-      "totalInvestment",
-      (data.totalInvestment || 0).toFixed(2)
-    );
+    localStorage.setItem("referralEarning", (data.referralEarning || 0).toFixed(2));
+    localStorage.setItem("totalInvestment", (data.totalInvestment || 0).toFixed(2));
 
     return data;
   } catch (err) {
@@ -83,48 +86,10 @@ export async function fetchUserData() {
 }
 
 // ----------------------------------------------------------
-// AUTO REFRESH EVERY 30 SECONDS
-// ----------------------------------------------------------
-export function startAutoRefresh() {
-  fetchUserData();
-  setInterval(fetchUserData, 30000);
-}
-
-
-// ----------------------------------------------------------
-// LOAD USER DATA (from localStorage, fallback to API)
-export async function loadUserData() {
-  let userData = localStorage.getItem("royalEmpireUser");
-  if (!userData) return null;
-
-  userData = JSON.parse(userData);
-
-  try {
-    // Always lowercase email
-    const email = userData.email?.toLowerCase().trim();
-    if (!email) return null;
-
-    const data = await fetchUserData(); // fetches from backend
-    return data;
-  } catch (err) {
-    console.error("❌ loadUserData error:", err);
-    return null;
-  }
-}
-
-// ----------------------------------------------------------
-// UPDATE BALANCE IN DOM
+// UPDATE BALANCE ON SCREEN
 // ----------------------------------------------------------
 export function updateBalancesDOM() {
-  const elements = {
-    totalBalance: document.getElementById("total-balance"),
-    eusdt: document.getElementById("eusdt-balance"),
-    totalEarning: document.getElementById("totalEarning"),
-    referralEarning: document.getElementById("referralEarning"),
-    totalInvestment: document.getElementById("totalInvestment"),
-    profileUserName: document.getElementById("menuUserName"),
-    headerUserName: document.getElementById("menuUserName"),
-  };
+  const id = (x) => document.getElementById(x);
 
   const values = {
     total: localStorage.getItem("totalBalance") || "0.00",
@@ -132,26 +97,24 @@ export function updateBalancesDOM() {
     totalEarning: localStorage.getItem("totalEarning") || "0",
     referralEarning: localStorage.getItem("referralEarning") || "0",
     totalInvestment: localStorage.getItem("totalInvestment") || "0",
-    name: localStorage.getItem("menuUserName") || "User", // FIXED!!
+    name: localStorage.getItem("menuUserName") || "User",
   };
 
-  if (elements.totalBalance) elements.totalBalance.textContent = values.total;
-  if (elements.eusdt) elements.eusdt.textContent = values.eusdt;
-  if (elements.totalEarning) elements.totalEarning.textContent = values.totalEarning;
-  if (elements.referralEarning) elements.referralEarning.textContent = values.referralEarning;
-  if (elements.totalInvestment) elements.totalInvestment.textContent = values.totalInvestment;
-  if (elements.profileUserName) elements.profileUserName.textContent = values.name;
-  if (elements.headerUserName) elements.headerUserName.textContent = values.name;
+  if (id("total-balance")) id("total-balance").textContent = values.total;
+  if (id("eusdt-balance")) id("eusdt-balance").textContent = values.eusdt;
+  if (id("totalEarning")) id("totalEarning").textContent = values.totalEarning;
+  if (id("referralEarning")) id("referralEarning").textContent = values.referralEarning;
+  if (id("totalInvestment")) id("totalInvestment").textContent = values.totalInvestment;
+
+  if (id("menuUserName")) id("menuUserName").textContent = values.name;
+  if (id("profileUserName")) id("profileUserName").textContent = values.name;
 }
 
 // ----------------------------------------------------------
-// AUTO REFRESH EVERY 10 SECONDS
-// ----------------------------------------------------------
-export function startAutoRefresh() {
-  fetchUserData().then(updateBalancesDOM);
 
+  // Then periodic load
   setInterval(async () => {
-    await fetchUserData();
-    updateBalancesDOM();
+    const data = await fetchUserData();
+    if (data) updateBalancesDOM();
   }, 10000);
 }
