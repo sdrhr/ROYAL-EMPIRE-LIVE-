@@ -1,50 +1,79 @@
 // ====================== ✅ common.js ======================
 // ✅ Base URL for API
+// ----------------------------------------------------------
+// CORRECT BACKEND URL
+// ----------------------------------------------------------
 const API_BASE = "https://royal-empire-11.onrender.com";
 
 // ----------------------------------------------------------
-// FETCH USER DATA
+// SAFE USER LOADER (FIXES [object Object] ERRORS)
+// ----------------------------------------------------------
 export async function fetchUserData() {
-  let userData = localStorage.getItem("royalEmpireUser");
+  let raw = localStorage.getItem("royalEmpireUser");
 
-  if (!userData) {
-    console.error("❌ No user saved in localStorage");
+  if (!raw) {
+    console.error("❌ royalEmpireUser missing in localStorage");
     return null;
   }
 
-  userData = JSON.parse(userData);
-
-  // 🔥 Always lowercase email
-  const email = userData.email?.toLowerCase().trim();
-  if (!email) {
-    console.error("❌ Email missing inside royalEmpireUser");
+  // Parse safely
+  let userObj;
+  try {
+    userObj = JSON.parse(raw);
+  } catch (e) {
+    console.error("❌ royalEmpireUser contains invalid JSON");
     return null;
   }
+
+  // FIX: sometimes email is inside userObj.email.email
+  let email = userObj?.email;
+
+  // If email is an object → extract real string
+  if (typeof email === "object" && email !== null) {
+    email = email.email;
+  }
+
+  // If still not a string → reject
+  if (typeof email !== "string") {
+    console.error("❌ userData.email is not a string:", email);
+    return null;
+  }
+
+  // ALWAYS lowercase email
+  email = email.toLowerCase().trim();
+
+  console.log("📩 Fetching user:", email);
 
   try {
-    // 🔥 Correctly pass email string
-    const res = await fetch(`${API_BASE}/api/user/${encodeURIComponent(email)}`);
+    const res = await fetch(`${API_BASE}/api/user/${email}`);
+
     if (!res.ok) throw new Error("User fetch error");
 
     const data = await res.json();
-    console.log("User data:", data);
 
-    // 🟢 Username fallback
-    const username = data.username || data.name || email.split("@")[0];
+    // Username fallback
+    const username =
+      data.username ||
+      data.name ||
+      (data.email ? data.email.split("@")[0] : "User");
 
-    // 🟢 Update visible names (header + profile)
+    // Update UI names
     const headerName = document.getElementById("menuUserName");
-    const profileName = document.getElementById("menuUserName");
     if (headerName) headerName.textContent = username;
-    if (profileName) profileName.textContent = username;
 
-    // 🟢 Save for other pages
+    // Save for usage
     localStorage.setItem("menuUserName", username);
     localStorage.setItem("totalBalance", (data.balance || 0).toFixed(2));
     localStorage.setItem("eusdtBalance", ((data.balance || 0) * 10).toFixed(2));
     localStorage.setItem("totalEarning", (data.totalEarning || 0).toFixed(2));
-    localStorage.setItem("referralEarning", (data.referralEarning || 0).toFixed(2));
-    localStorage.setItem("totalInvestment", (data.totalInvestment || 0).toFixed(2));
+    localStorage.setItem(
+      "referralEarning",
+      (data.referralEarning || 0).toFixed(2)
+    );
+    localStorage.setItem(
+      "totalInvestment",
+      (data.totalInvestment || 0).toFixed(2)
+    );
 
     return data;
   } catch (err) {
@@ -52,6 +81,15 @@ export async function fetchUserData() {
     return null;
   }
 }
+
+// ----------------------------------------------------------
+// AUTO REFRESH EVERY 30 SECONDS
+// ----------------------------------------------------------
+export function startAutoRefresh() {
+  fetchUserData();
+  setInterval(fetchUserData, 30000);
+}
+
 
 // ----------------------------------------------------------
 // LOAD USER DATA (from localStorage, fallback to API)
