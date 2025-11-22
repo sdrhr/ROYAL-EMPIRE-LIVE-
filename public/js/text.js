@@ -78,44 +78,44 @@ document.addEventListener("DOMContentLoaded", () => {
   // -------------------------------
   // Load User Data
   // -------------------------------
-  async function loadUserData() {
-    try {
-      // ❗ FIXED: incorrect syntax $(email)}
-      const res = await fetch(`${API_BASE}/api/user/${email}`);
+async function loadUserData() {
+  try {
+    const res = await fetch(`${API_BASE}/api/user/${user._id}`);
 
-      if (!res.ok) throw new Error("User fetch error");
+    if (!res.ok) throw new Error("User fetch error");
 
-      const data = await res.json();
+    const data = await res.json();
 
-      localStorage.setItem("balance", data.balance || 0);
+    localStorage.setItem("balance", data.balance || 0);
 
-      if (balanceEl) balanceEl.textContent = (data.balance || 0).toFixed(2);
-      if (eusdtEl) eusdtEl.textContent = ((data.balance || 0) * 10).toFixed(2);
+    if (balanceEl) balanceEl.textContent = (data.balance || 0).toFixed(2);
+    if (eusdtEl) eusdtEl.textContent = ((data.balance || 0) * 10).toFixed(2);
 
-      if (historyDiv && data.transactions?.length) {
-        historyDiv.innerHTML = data.transactions
-          .slice()
-          .reverse()
-          .map(
-            (t) => `
-              <div class="transaction-entry ${t.type}">
-                <div class="left">
-                  <strong>${t.type.toUpperCase()}</strong> - $${t.amount.toFixed(2)}
-                </div>
-                <div class="right">
-                  <div>${new Date(t.createdAt).toLocaleString()}</div>
-                  <div>Status: ${t.status}</div>
-                </div>
-              </div>`
-          )
-          .join("");
-      } else {
-        historyDiv.innerHTML = "<p>No transactions yet.</p>";
-      }
-    } catch (err) {
-      console.error("❌ loadUserData error:", err);
+    if (historyDiv && data.transactions?.length) {
+      historyDiv.innerHTML = data.transactions
+        .slice()
+        .reverse()
+        .map(
+          (t) => `
+            <div class="transaction-entry ${t.type}">
+              <div class="left">
+                <strong>${t.type.toUpperCase()}</strong> - $${t.amount.toFixed(2)}
+              </div>
+              <div class="right">
+                <div>${new Date(t.createdAt).toLocaleString()}</div>
+                <div>Status: ${t.status}</div>
+              </div>
+            </div>`
+        )
+        .join("");
+    } else {
+      historyDiv.innerHTML = "<p>No transactions yet.</p>";
     }
+  } catch (err) {
+    console.error("❌ loadUserData error:", err);
   }
+}
+
 
   // -------------------------------
   // Submit Transaction
