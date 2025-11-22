@@ -15,19 +15,11 @@ let balanceVisible = false;
 let selectedPackageAmount = 0;
 
 // ==================== CONSTANTS ====================
-const API_BASE = "https://royal-empire-11.onrender.com";
+
 
 // ==================== UNIVERSAL SAVE FUNCTION ====================
-function saveRoyalUser(email, username, balance = 0) {
-  localStorage.setItem(
-    "royalEmpireUser",
-    JSON.stringify({
-      email: String(email).trim(),
-      username: username || email,
-      balance: Number(balance),
-    })
-  );
-}
+
+
 
 // ==================== LOAD USER ====================
 function loadUserData() {
@@ -141,7 +133,7 @@ async function handleRegistration(e) {
   }
 
   try {
-    const res = await fetch(`${API_BASE}/api/register`, {
+    const res = await fetch("https://royal-empire-11.onrender.com/api/auth/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -158,7 +150,22 @@ async function handleRegistration(e) {
 
     if (!res.ok) throw new Error(data.message);
 
-    saveRoyalUser(email, username, 0);
+   if (!res.ok) throw new Error(data.message);
+
+// SAVE FULL USER OBJECT
+localStorage.setItem(
+  "royalEmpireUser",
+  JSON.stringify({
+    _id: data.user._id,
+    email: data.user.email,
+    username: data.user.username,
+    balance: data.user.balance || 0
+  })
+);
+
+alert("Login successful!");
+window.location.href = "dashboard.html";
+
 
     alert("Registration successful!");
     window.location.href = "dashboard.html";
@@ -180,7 +187,7 @@ async function handleLogin(e) {
   }
 
   try {
-    const res = await fetch(`${API_BASE}/api/login`, {
+    const res = await fetch("https://royal-empire-11.onrender.com/api/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ contact: email, password }),
@@ -189,7 +196,21 @@ async function handleLogin(e) {
     const data = await res.json();
     if (!res.ok) throw new Error(data.message);
 
-    saveRoyalUser(data.email || email, data.username, data.balance);
+   if (!res.ok) throw new Error(data.message);
+
+// SAVE FULL USER OBJECT
+localStorage.setItem(
+  "royalEmpireUser",
+  JSON.stringify({
+    _id: data.user._id,
+    email: data.user.email,
+    username: data.user.username,
+    balance: data.user.balance || 0
+  })
+);
+
+alert("Login successful!");
+window.location.href = "dashboard.html";
 
     alert("Login successful!");
     window.location.href = "dashboard.html";
